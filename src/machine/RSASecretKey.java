@@ -13,7 +13,11 @@ import java.security.SecureRandom;
  */
 public class RSASecretKey {
     private static final int CERTAINTY = 80;
-    public static final int F4 = 0x10001;
+    public static final int F0 = 3;
+    public static final int F1 = 5;
+    public static final int F2 = 17;
+    public static final int F3 = 257;
+    public static final int F4 = 65537;
 
     private RSAPublicKey publicKey;     // public
     private BigInteger d;               // private

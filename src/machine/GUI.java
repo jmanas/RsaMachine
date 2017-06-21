@@ -18,8 +18,9 @@ import java.util.Arrays;
  */
 public class GUI
         implements ActionListener {
-    private static final String TITLE = "RSA Machine (16.9.2016)";
+    private static final String TITLE = "RSA Machine (21.6.2017)";
     private final JFrame frame;
+    private int radix = 16;
 
     private RSAPublicKey publicKey;
     private RSASecretKey secretKey;
@@ -47,7 +48,9 @@ public class GUI
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         Container container = frame.getContentPane();
 
+        container.add(new JLabel(" (academic - prime numbers are not necessarily optimal for RSA) "), BorderLayout.NORTH);
         container.add(mkPane(), BorderLayout.CENTER);
+        container.add(mkPresentationPane(), BorderLayout.SOUTH);
 
         frame.pack();
         frame.setVisible(true);
@@ -71,7 +74,6 @@ public class GUI
         msgTF = new JTextField(20);
         blackMsgTF = new JTextField(20);
         redMsgTF = new JTextField();
-        blackMsgTF.setEditable(false);
         redMsgTF.setEditable(false);
 
         generateButton = new JButton("generate");
@@ -109,6 +111,40 @@ public class GUI
         return panel;
     }
 
+    private JPanel mkPresentationPane() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+
+        final JComboBox<String> comboBox = new JComboBox<>();
+        comboBox.addItem("binary");
+        comboBox.addItem("octal");
+        comboBox.addItem("decimal");
+        comboBox.addItem("hexadecimal");
+        comboBox.setSelectedItem("hexadecimal");
+        panel.add(comboBox);
+        comboBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String item = (String) comboBox.getSelectedItem();
+                switch (item) {
+                    case "binary":
+                        radix = 2;
+                        break;
+                    case "octal":
+                        radix = 8;
+                        break;
+                    case "decimal":
+                        radix = 10;
+                        break;
+                    case "hexadecimal":
+                        radix = 16;
+                        break;
+                }
+            }
+        });
+
+        return panel;
+    }
+
     private void add(JPanel panel, int row, String label, JComponent comp1, JComponent comp2) {
         panel.add(new JLabel(label), String.format("%d,%d", 0, row));
         panel.add(comp1, String.format("%d,%d", 1, row));
@@ -135,26 +171,39 @@ public class GUI
         try {
             secretKey = new RSASecretKey(Integer.parseInt(nBitsTF.getText()));
             publicKey = secretKey.getRSAPublicKey();
-            numberPTF.setText(secretKey.getP().toString(16));
-            numberQTF.setText(secretKey.getQ().toString(16));
-            numberNTF.setText(secretKey.getN().toString(16));
-            numberETF.setText(publicKey.getE().toString(16));
-            numberDTF.setText(secretKey.getD().toString(16));
+            numberPTF.setText(secretKey.getP().toString(radix));
+            numberQTF.setText(secretKey.getQ().toString(radix));
+            numberNTF.setText(secretKey.getN().toString(radix));
+            numberETF.setText(publicKey.getE().toString(radix));
+            numberDTF.setText(secretKey.getD().toString(radix));
         } catch (Exception e) {
-            JOptionPane.showConfirmDialog(null, e, "generate",
-                    JOptionPane.OK_OPTION, JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame,
+                    e.getMessage(), e.getClass().getSimpleName(),
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void encrypt() {
-        BigInteger msg = new BigInteger(msgTF.getText(), 16);
-        BigInteger black = publicKey.encrypt(msg);
-        blackMsgTF.setText(black.toString(16));
+        try {
+            BigInteger msg = new BigInteger(msgTF.getText(), radix);
+            BigInteger black = publicKey.encrypt(msg);
+            blackMsgTF.setText(black.toString(radix));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(frame,
+                    e.getMessage(), e.getClass().getSimpleName(),
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void decrypt() {
-        BigInteger black = new BigInteger(blackMsgTF.getText(), 16);
-        BigInteger red = secretKey.decrypt(black);
-        redMsgTF.setText(red.toString(16));
+        try {
+            BigInteger black = new BigInteger(blackMsgTF.getText(), radix);
+            BigInteger red = secretKey.decrypt(black);
+            redMsgTF.setText(red.toString(radix));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(frame,
+                    e.getMessage(), e.getClass().getSimpleName(),
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 }
