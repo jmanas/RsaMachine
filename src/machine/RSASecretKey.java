@@ -35,9 +35,12 @@ public class RSASecretKey {
         BigInteger p_1, q_1;
         BigInteger gcd;
 
+        int counter = 0;
         do {
+            if (counter++ > 100)
+                throw new IllegalArgumentException("no primes found!");
             do {
-                p = new BigInteger(keyLength / 2, CERTAINTY, rnd);
+                p = new BigInteger((keyLength + 1) / 2, CERTAINTY, rnd);
                 p_1 = p.subtract(BigInteger.ONE);
                 gcd = e.gcd(p_1);
             } while (!gcd.equals(BigInteger.ONE));
@@ -104,7 +107,7 @@ public class RSASecretKey {
 
     // CRT _ Chinese Remainder Theorem
     // used in smart cards
-    public BigInteger decrypt_crt(BigInteger enc) {
+    private BigInteger decrypt_crt(BigInteger enc) {
         // precalculations - when d is set
         BigInteger n = getN();
 
@@ -151,11 +154,11 @@ public class RSASecretKey {
     private static Random random = new Random();
 
     private static void test(int keyLength) {
-        for (int i= 0; i < 16; i++) {
+        for (int i = 0; i < 16; i++) {
             RSASecretKey secretKey = new RSASecretKey(keyLength);
             BigInteger red = BigInteger.valueOf(Math.abs(random.nextLong()));
             BigInteger black = secretKey.encrypt(red);
-            BigInteger recovered1 = secretKey.decrypt(black);
+            BigInteger recovered1 = secretKey.decrypt_raw(black);
             BigInteger recovered2 = secretKey.decrypt_crt(black);
             if (!red.equals(recovered1))
                 System.err.println("ERROR 1: " + keyLength);

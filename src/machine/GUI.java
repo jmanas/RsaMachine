@@ -18,7 +18,9 @@ import java.util.Arrays;
  */
 public class GUI
         implements ActionListener {
-    private static final String TITLE = "RSA Machine (21.6.2017)";
+    private static final String TITLE =
+            String.format("RSA Machine (%s)", Version.VERSION);
+
     private final JFrame frame;
     private int radix = 16;
 
@@ -169,6 +171,11 @@ public class GUI
 
     private void generate() {
         try {
+            numberPTF.setText("");
+            numberQTF.setText("");
+            numberNTF.setText("");
+            numberETF.setText("");
+            numberDTF.setText("");
             secretKey = new RSASecretKey(Integer.parseInt(nBitsTF.getText()));
             publicKey = secretKey.getRSAPublicKey();
             numberPTF.setText(secretKey.getP().toString(radix));
