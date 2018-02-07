@@ -4,6 +4,8 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Random;
 
+import static java.math.BigInteger.ONE;
+
 /**
  * RSA keys: secret part.
  *
@@ -11,12 +13,11 @@ import java.util.Random;
  * @version 17.9.2016
  */
 public class RSASecretKey {
-    private static final int CERTAINTY = 80;
     public static final int F0 = 3;
     public static final int F1 = 5;
     public static final int F2 = 17;
     public static final int F3 = 257;
-    public static final int F4 = 65537;
+    private static final int F4 = 65537;
 
     private RSAPublicKey publicKey;     // public
     private BigInteger d;               // private
@@ -25,40 +26,79 @@ public class RSASecretKey {
     private BigInteger q;
 
     public RSASecretKey(int keyLength) {
-        BigInteger n, e;
+        BigInteger n = null;
+
+        BigInteger e;
         if (keyLength > 20)
             e = BigInteger.valueOf(F4);
         else
             e = BigInteger.valueOf(3);
 
         SecureRandom rnd = new SecureRandom();
-        BigInteger p_1, q_1;
-        BigInteger gcd;
+        BigInteger p_1 = null;
+        BigInteger q_1 = null;
 
+        // let's try p & q of equal length size/2
+        // if after some rounds there is no way, relax equal size requirement
+
+        // e.g. for 6 bits, there is no 3+3 solution
+        //      e= 3; p= 3; q= 11; n= 33;
         int counter = 0;
-        do {
-            if (counter++ > 100)
+        while (true) {      // let's try until all conditions are satisfied
+            counter++;
+            int length_p;
+            if (counter < 50)
+                length_p = keyLength / 2;
+            else if (counter < 100)
+                length_p = keyLength / 2 - 1;
+            else
                 throw new IllegalArgumentException("no primes found!");
-            do {
-                p = new BigInteger((keyLength + 1) / 2, CERTAINTY, rnd);
-                p_1 = p.subtract(BigInteger.ONE);
-                gcd = e.gcd(p_1);
-            } while (!gcd.equals(BigInteger.ONE));
 
-            do {
-                q = new BigInteger(keyLength / 2, CERTAINTY, rnd);
-                q_1 = q.subtract(BigInteger.ONE);
-                gcd = e.gcd(q_1);
-            } while (!gcd.equals(BigInteger.ONE));
+            p = BigInteger.probablePrime(length_p, rnd);
+            p_1 = p.subtract(ONE);
+            if (!e.gcd(p_1).equals(ONE))
+                continue;
 
-            gcd = p.gcd(q);
-        } while (!gcd.equals(BigInteger.ONE));
+            int length_q = keyLength - length_p;
+            q = BigInteger.probablePrime(length_q, rnd);
 
-        n = p.multiply(q);
+            // we need two different primes
+            if (p.equals(q))
+                continue;
+
+            n = p.multiply(q);
+            // be sure n = p*q is of the desired length
+            // e.g. for 10 bits
+            //      p= 17 (5 bits)
+            //      q= 23 (5 bits)
+            //      n= 391 (9 bits)
+            if (n.bitLength() != keyLength)
+                continue;
+
+            q_1 = q.subtract(ONE);
+            if (!e.gcd(q_1).equals(ONE))
+                continue;
+
+            if (p.gcd(q).equals(ONE))
+                break;
+        }
+
         publicKey = new RSAPublicKey(n, e);
 
         BigInteger phi = p_1.multiply(q_1);
         d = e.modInverse(phi);
+    }
+
+    public static RSASecretKey mk(BigInteger p, BigInteger q, BigInteger e) {
+        BigInteger p_1 = p.subtract(ONE);
+        BigInteger q_1 = q.subtract(ONE);
+        BigInteger phi = p_1.multiply(q_1);
+        if (!e.gcd(phi).equals(ONE))
+            throw new IllegalArgumentException("gcd(e, phi) != 1");
+
+        BigInteger n = p.multiply(q);
+        BigInteger d = e.modInverse(phi);
+        return new RSASecretKey(n, e, d);
     }
 
     public RSASecretKey(BigInteger n, BigInteger e, BigInteger d) {
@@ -111,8 +151,8 @@ public class RSASecretKey {
         // precalculations - when d is set
         BigInteger n = getN();
 
-        BigInteger p_1 = p.subtract(BigInteger.ONE);
-        BigInteger q_1 = q.subtract(BigInteger.ONE);
+        BigInteger p_1 = p.subtract(ONE);
+        BigInteger q_1 = q.subtract(ONE);
         BigInteger d_p_1 = d.mod(p_1);
         BigInteger d_q_1 = d.mod(q_1);
 
